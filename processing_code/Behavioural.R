@@ -103,7 +103,7 @@ plot_glm_surface <- function(data, x_var, y_var, z_var, group_var,
 
 
 # loading data
-data <- read.csv("/Users/ali/Documents/Experiment/Analysis_TIW/data_raw/subEM.csv")
+data <- read.csv("/Users/ali/Documents/Experiment/DFF_analysis/raw_data/subAL.csv")
 
 str(data)    # check structure
 
@@ -118,12 +118,7 @@ data$ResProbe <- ifelse(data$Resp %in% c(1,2),
                         "top",
                         "bottom")
 
-data$dtcolor <- recode(data$dtcolor,
-                       `60` = 5,
-                       `100` = 4,
-                       `130` = 3,
-                       `190` = 2,
-                       `220` = 1)
+data$dtcolor <- data$dtcolor/255
 
 #data$RespProbeBinary <- ifelse(data$ResProbe == "top", 1, 0)
 data$RespProbeBinary <- ifelse(data$probe == data$ResProbe, 1, 0)

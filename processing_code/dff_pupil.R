@@ -12,9 +12,9 @@ library(readr)
 
 peaks_list <- list()
 
-sub = "subLU"
+sub = "subAL"
 
-dat <- read.asc(paste0("/Users/ali/Documents/Experiment/Analysis_TIW/data_raw/",sub,".asc"))
+dat <- read.asc(paste0("/Users/ali/Documents/Experiment/DFF_analysis/raw_data/",sub,".asc"))
 
 
 viewing_distance <- 80 #cm to monitor
