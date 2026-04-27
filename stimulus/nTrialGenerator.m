@@ -2,7 +2,7 @@ clear; clc;
 
 %% PARAMETERS
 ISIframes_levels = [1 3 5 7 9];
-dtcolor_levels = [64 100 128 191 255]; 
+dtcolor_levels = [0 40 80 120 200]; 
 
 %% ---------------- Base design (cueType + flashSide) ----------------
 cueType = [];
@@ -191,7 +191,7 @@ legend(pb)
 title('Probe within Color')
 
 %% ---------------- SAVE ----------------
-save('/Users/ali/Documents/Experiment/Analysis_TIW/trialList.mat', 'trialList');
+save('/Users/ali/Documents/Experiment/DFF_analysis/stimulus/trialListIntro.mat', 'trialList');
 
 % Set random seed (optional, for reproducibility)
 rng('shuffle'); % or use a fixed number like rng(1)
@@ -200,4 +200,4 @@ rng('shuffle'); % or use a fixed number like rng(1)
 trialList = trialList(randperm(size(trialList, 1), 10), :);
 
 % Save to .mat file
-save('/Users/ali/Documents/Experiment/Analysis_TIW/trialListIntro.mat', 'trialList');
+save('/Users/ali/Documents/Experiment/DFF_analysis/stimulus/trialListIntro.mat', 'trialList');

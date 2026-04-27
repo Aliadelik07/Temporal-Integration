@@ -7,7 +7,7 @@ Screen('Preference', 'SkipSyncTests', 1);
 fname = 'subIntro.csv';
 
 % Refreash rate
-expectedRefreshRate = 144; %Hz
+expectedRefreshRate = 60; %Hz
 
 % Cue
 cueFrames = round(1 * expectedRefreshRate); % 1000 ms

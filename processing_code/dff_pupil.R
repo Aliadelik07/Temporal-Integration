@@ -12,9 +12,9 @@ library(readr)
 
 peaks_list <- list()
 
-sub = "subAL"
+sub = "subSH"
 
-dat <- read.asc(paste0("/Users/ali/Documents/Experiment/DFF_analysis/raw_data/",sub,".asc"))
+dat <- read.asc(paste0("/Users/ali/Documents/Experiment/DFF_data/",sub,".asc"))
 
 
 viewing_distance <- 80 #cm to monitor
@@ -63,12 +63,13 @@ dfp$psc <- rowMeans(dfp[, c("psr", "psl")], na.rm = TRUE)
 hfig <- ggplot(dfp, aes(x = xc_deg, y = yc_deg)) +
   geom_bin2d() +
   scale_fill_gradientn(
-    colors = c("blue","green", "red"),
+    colors = c("blue", "green", "red"),
+    trans = "log",
     name = "Count"
   ) +
   labs(
-    title = paste("Heatmap of Eye Positions "),
-    x = "Horizontal", 
+    title = "Heatmap of Eye Positions",
+    x = "Horizontal",
     y = "Vertical"
   ) +
   theme_minimal()
@@ -79,10 +80,10 @@ dfp <- dfp %>%
   mutate(direction_deg = atan2(lead(yc_deg) - yc_deg,
                                lead(xc_deg) - xc_deg) * 180 / pi)
 
-ggplot(subset(dfp,ms==1), aes(x = direction_deg)) +
+ggplot(dfp, aes(x = direction_deg)) +
   geom_histogram(binwidth = 10, fill = "steelblue") +
   xlim(-180, 180) +
-  labs(title = "Microsaccade Distribution of Direction_deg") +
+  labs(title = "Saccade Distribution of Direction_deg") +
   theme_minimal()
 
 # microsaccade -----
@@ -152,5 +153,28 @@ fig <- ggplot(peaks, aes(x = magnitude_c, y = velocity_c)) +
 
 print(fig)
 
-paste0("/Users/ali/Documents/Experiment/Analysis_TIW/data_raw/",sub,".csv")
-write.csv(dfp, paste0("/Users/ali/Documents/Experiment/Analysis_TIW/data_raw/",sub,"_pupil.csv"))
+ggplot(subset(dfp,ms==1), aes(x = direction_deg)) +
+  geom_histogram(binwidth = 10, fill = "steelblue") +
+  xlim(-180, 180) +
+  labs(title = "Microsaccade Distribution of Direction_deg") +
+  theme_minimal()
+
+hfig <- ggplot(subset(dfp, ms == 1), aes(x = xc_deg, y = yc_deg)) +
+  geom_bin2d() +
+  scale_fill_gradientn(
+    colors = c("blue", "green", "red"),
+    trans = "log",
+    name = "Count"
+  ) +
+  labs(
+    title = "Heatmap of Eye Positions",
+    x = "Horizontal",
+    y = "Vertical"
+  ) +
+  theme_minimal()
+
+hfig
+
+write.csv(dfp, paste0("/Users/ali/Documents/Experiment/DFF_data/",sub,"_pupil.csv"))
+
+#dfp <- read_csv(paste0("/Users/ali/Documents/Experiment/DFF_data/subOC_pupil.csv"))

@@ -103,7 +103,7 @@ plot_glm_surface <- function(data, x_var, y_var, z_var, group_var,
 
 
 # loading data
-data <- read.csv("/Users/ali/Documents/Experiment/DFF_analysis/raw_data/subAL.csv")
+data <- read.csv("/Users/ali/Documents/Experiment/DFF_data/subSH.csv")
 
 str(data)    # check structure
 
@@ -118,24 +118,24 @@ data$ResProbe <- ifelse(data$Resp %in% c(1,2),
                         "top",
                         "bottom")
 
-data$dtcolor <- data$dtcolor/255
 
-#data$RespProbeBinary <- ifelse(data$ResProbe == "top", 1, 0)
+
 data$RespProbeBinary <- ifelse(data$probe == data$ResProbe, 1, 0)
-data$dtcolor <- as.integer(data$dtcolor)/5
+data$dtcolor <- round(1 - (data$dtcolor / 255), 1)
 data$RespFlashBinary <- ifelse(data$RespFlash == "two", 1, 0)
 data$ISIframes <- as.integer(data$ISIframes)
-data$dt_top <- ifelse(data$probe == "top", data$dtcolor, -data$dtcolor)
+data$dt_top <- ifelse(data$probe == "top", -data$dtcolor, data$dtcolor)
 data$ChoiceTop <- ifelse(data$ResProbe == "top", 1, 0)
 
 
 ## =========== SPACIAL psychometric curves ===========
 
 # space accuracy by contrast
-ggplot(data, aes(x = dt_top, y = ChoiceTop, color = CueValidity)) +
+ggplot(data, aes(x = - dt_top, y = ChoiceTop, color = CueValidity)) +
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
+  geom_point(alpha = 0.4, position = position_jitter(height = 0.02)) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
   labs(title = "Spacial Psychometric", y = "P(choose top)", x = "Contrast (top relative)") +
@@ -148,7 +148,7 @@ p1 <- ggplot(data, aes(x = ISIframes, y = RespProbeBinary, color = CueValidity))
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = mean(range(data$ISIframes)), linetype = "dashed", color = "black") +
   labs(title = "Space resolution", y = "P(accuracy)", x = "ISI") +
   theme_bw() + theme(legend.position = "none")
 
@@ -157,7 +157,7 @@ p2 <- ggplot(data, aes(x = dtcolor, y = RespProbeBinary, color = CueValidity)) +
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = mean(range(data$dtcolor)), linetype = "dashed", color = "black") +
   labs(title = "", y = "P(accuracy)", x = "Contrast") +
   theme_bw() + theme(
     legend.position = c(0.98, 0.02),   # bottom-right
@@ -166,7 +166,7 @@ p2 <- ggplot(data, aes(x = dtcolor, y = RespProbeBinary, color = CueValidity)) +
 
 grid.arrange(p1, p2, ncol = 2)
 
-ggplot(subset(data,data$RespFlash =='one'), aes(x = dt_top, y = ChoiceTop, color = CueValidity)) +
+p1 <- ggplot(subset(data,data$RespFlash =='one'), aes(x = - dt_top, y = ChoiceTop, color = CueValidity)) +
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
@@ -174,9 +174,10 @@ ggplot(subset(data,data$RespFlash =='one'), aes(x = dt_top, y = ChoiceTop, color
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
   labs(title = "One flash chosen",y = "P(choose top)", x = "Contrast (top relative)") +
-  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1))
+  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1)) +
+  theme(legend.position = "none")
 
-ggplot(subset(data,data$RespFlash =='two'), aes(x = dt_top, y = ChoiceTop, color = CueValidity)) +
+p2 <- ggplot(subset(data,data$RespFlash =='two'), aes(x = - dt_top, y = ChoiceTop, color = CueValidity)) +
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
@@ -184,8 +185,13 @@ ggplot(subset(data,data$RespFlash =='two'), aes(x = dt_top, y = ChoiceTop, color
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
   labs(title = "Two flash chosen",y = "P(choose top)", x = "Contrast (top relative)") +
-  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1))
+  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1)) +
+  theme_bw() + theme(
+    legend.position = c(0.98, 0.02),   # bottom-right
+    legend.justification = c(1, 0)     # anchor corner correctly
+  )
 
+grid.arrange(p1, p2, ncol = 2)
 ## =========== TEMPORAL psychometric curves ===========
 
 ggplot(data, aes(x = ISIframes, y = RespFlashBinary, color = CueValidity)) +
@@ -205,7 +211,7 @@ p1 <- ggplot(data, aes(x = ISIframes, y = RespFlashBinary, color = CueValidity))
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = mean(range(data$ISIframes)), linetype = "dashed", color = "black") +
   labs(title = "Temporal resolution", y = "P(accuracy)", x = "ISI") +
   theme_bw() + theme(legend.position = "none")
 
@@ -214,7 +220,7 @@ p2 <- ggplot(data, aes(x = dtcolor, y = RespFlashBinary, color = CueValidity)) +
               method.args = list(family = binomial(link = "probit")),
               se = FALSE) +
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = mean(range(data$dtcolor)), linetype = "dashed", color = "black") +
   labs(title = "", y = "P(accuracy)", x = "Contrast") +
   theme_bw() + theme(
     legend.position = c(0.98, 0.02),   # bottom-right
