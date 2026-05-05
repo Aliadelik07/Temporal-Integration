@@ -100,10 +100,17 @@ plot_glm_surface <- function(data, x_var, y_var, z_var, group_var,
     )
 }
 
+subs <- c("subSH", "subTH",'subAL')
+subs <- c('subAL')
+data_list <- list()
 
+for (sub in subs) {
+  df <- read.csv(paste0("/Users/ali/Documents/Experiment/DFF_data/", sub, ".csv"))
+  df$subject <- sub
+  data_list[[sub]] <- df
+}
 
-# loading data
-data <- read.csv("/Users/ali/Documents/Experiment/DFF_data/subSH.csv")
+data <- do.call(rbind, data_list)
 
 str(data)    # check structure
 
@@ -127,104 +134,166 @@ data$ISIframes <- as.integer(data$ISIframes)
 data$dt_top <- ifelse(data$probe == "top", -data$dtcolor, data$dtcolor)
 data$ChoiceTop <- ifelse(data$ResProbe == "top", 1, 0)
 
+thin = 0.1
 
 ## =========== SPACIAL psychometric curves ===========
-
-# space accuracy by contrast
-ggplot(data, aes(x = - dt_top, y = ChoiceTop, color = CueValidity)) +
+ggplot(data, aes(x = -dt_top, y = ChoiceTop, color = CueValidity)) +
+  
+  # --- subject-level curves ---
+  stat_smooth(aes(group = interaction(subject, CueValidity)),
+              method = "glm",
+              method.args = list(family = binomial(link = "probit")),
+              se = FALSE,
+              alpha = 0.3,
+              linewidth = thin) +
+  
+  # --- global curve (thicker) ---
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
-  geom_point(alpha = 0.4, position = position_jitter(height = 0.02)) +
-  geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-  labs(title = "Spacial Psychometric", y = "P(choose top)", x = "Contrast (top relative)") +
-  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1))
+              se = FALSE,
+              linewidth = 1.5) +
+  
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey") +
+  
+  labs(title = "Spatial Psychometric",
+       y = "P(choose top)",
+       x = "Contrast (top relative)") +
+  
+  theme_bw() +
+  coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1))
+
 
 
 # interference --------
 p1 <- ggplot(data, aes(x = ISIframes, y = RespProbeBinary, color = CueValidity)) +
+  
+  # --- subject-level curves ---
+  stat_smooth(aes(group = interaction(subject, CueValidity)),
+              method = "glm",
+              method.args = list(family = binomial(link = "probit")),
+              se = FALSE,
+              alpha = 0.3,
+              linewidth = thin) +
+  
+  # --- global curve ---
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
+              se = FALSE,
+              linewidth = 1.5) +
+  
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = mean(range(data$ISIframes)), linetype = "dashed", color = "black") +
   labs(title = "Space resolution", y = "P(accuracy)", x = "ISI") +
-  theme_bw() + theme(legend.position = "none")
+  theme_bw() +
+  theme(legend.position = "none")
+
 
 p2 <- ggplot(data, aes(x = dtcolor, y = RespProbeBinary, color = CueValidity)) +
+  
+  # --- subject-level curves ---
+  stat_smooth(aes(group = interaction(subject, CueValidity)),
+              method = "glm",
+              method.args = list(family = binomial(link = "probit")),
+              se = FALSE,
+              alpha = 0.3,
+              linewidth = thin) +
+  
+  # --- global curve ---
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
+              se = FALSE,
+              linewidth = 1.5) +
+  
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = mean(range(data$dtcolor)), linetype = "dashed", color = "black") +
   labs(title = "", y = "P(accuracy)", x = "Contrast") +
-  theme_bw() + theme(
-    legend.position = c(0.98, 0.02),   # bottom-right
-    legend.justification = c(1, 0)     # anchor corner correctly
-  )
-
-grid.arrange(p1, p2, ncol = 2)
-
-p1 <- ggplot(subset(data,data$RespFlash =='one'), aes(x = - dt_top, y = ChoiceTop, color = CueValidity)) +
-  stat_smooth(method = "glm",
-              method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
-  geom_point(alpha = 0.4, position = position_jitter(height = 0.02)) +
-  geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-  labs(title = "One flash chosen",y = "P(choose top)", x = "Contrast (top relative)") +
-  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1)) +
-  theme(legend.position = "none")
-
-p2 <- ggplot(subset(data,data$RespFlash =='two'), aes(x = - dt_top, y = ChoiceTop, color = CueValidity)) +
-  stat_smooth(method = "glm",
-              method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
-  geom_point(alpha = 0.4, position = position_jitter(height = 0.02)) +
-  geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-  labs(title = "Two flash chosen",y = "P(choose top)", x = "Contrast (top relative)") +
-  theme_bw() + coord_fixed(ratio = 2, xlim = c(-1, 1), ylim = c(0, 1)) +
-  theme_bw() + theme(
-    legend.position = c(0.98, 0.02),   # bottom-right
-    legend.justification = c(1, 0)     # anchor corner correctly
+  theme_bw() +
+  theme(
+    legend.position = c(0.98, 0.02),
+    legend.justification = c(1, 0)
   )
 
 grid.arrange(p1, p2, ncol = 2)
 ## =========== TEMPORAL psychometric curves ===========
 
 ggplot(data, aes(x = ISIframes, y = RespFlashBinary, color = CueValidity)) +
+  
+  # --- subject-level curves ---
+  stat_smooth(aes(group = interaction(subject, CueValidity)),
+              method = "glm",
+              method.args = list(family = binomial(link = "probit")),
+              se = FALSE,
+              alpha = 0.3,
+              linewidth = thin) +
+  
+  # --- global curve ---
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
+              se = FALSE,
+              linewidth = 1.5) +
+  
   #geom_point(alpha = 0.4, position = position_jitter(height = 0.02)) +
-  labs(title = "Temporal psychometric",y = "P(choose two)", x = "ISI") +
+  
+  labs(title = "Temporal psychometric",
+       y = "P(choose two)",
+       x = "ISI") +
+  
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 5, linetype = "dashed", color = "black") +
-  theme_bw() + coord_fixed(ratio = 9, xlim = c(0, 9), ylim = c(0, 1))
+  
+  theme_bw() +
+  coord_fixed(ratio = 9, xlim = c(0, 9), ylim = c(0, 1))
+
 
 
 # interference --------
 p1 <- ggplot(data, aes(x = ISIframes, y = RespFlashBinary, color = CueValidity)) +
+  
+  # --- subject-level curves ---
+  stat_smooth(aes(group = interaction(subject, CueValidity)),
+              method = "glm",
+              method.args = list(family = binomial(link = "probit")),
+              se = FALSE,
+              alpha = 0.3,
+              linewidth = thin) +
+  
+  # --- global curve ---
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
+              se = FALSE,
+              linewidth = 1.5) +
+  
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = mean(range(data$ISIframes)), linetype = "dashed", color = "black") +
   labs(title = "Temporal resolution", y = "P(accuracy)", x = "ISI") +
-  theme_bw() + theme(legend.position = "none")
+  theme_bw() +
+  theme(legend.position = "none")
+
 
 p2 <- ggplot(data, aes(x = dtcolor, y = RespFlashBinary, color = CueValidity)) +
+  
+  # --- subject-level curves ---
+  stat_smooth(aes(group = interaction(subject, CueValidity)),
+              method = "glm",
+              method.args = list(family = binomial(link = "probit")),
+              se = FALSE,
+              alpha = 0.3,
+              linewidth = thin) +
+  
+  # --- global curve ---
   stat_smooth(method = "glm",
               method.args = list(family = binomial(link = "probit")),
-              se = FALSE) +
+              se = FALSE,
+              linewidth = 1.5) +
+  
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "black") +
   geom_vline(xintercept = mean(range(data$dtcolor)), linetype = "dashed", color = "black") +
   labs(title = "", y = "P(accuracy)", x = "Contrast") +
-  theme_bw() + theme(
-    legend.position = c(0.98, 0.02),   # bottom-right
-    legend.justification = c(1, 0)     # anchor corner correctly
+  theme_bw() +
+  theme(
+    legend.position = c(0.98, 0.02),
+    legend.justification = c(1, 0)
   )
 
 grid.arrange(p1, p2, ncol = 2)
@@ -258,30 +327,76 @@ plot_glm_surface(
 
 ## =========== Error Bar Plot ===========
 ggplot(data, aes(x = RespFlash, y = RespProbeBinary)) +
-  geom_jitter(width = 0.1, alpha = 0.3, size = 1) +
-  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  
+  # --- raw data ---
+  geom_jitter(width = 0.05, alpha = 0.2, size = 1) +
+  
+  # --- subject-level means ---
+  stat_summary(aes(group = subject),
+               fun = mean,
+               geom = "point",
+               color = "pink",
+               alpha = 0.5,
+               size = 1.5,
+               position = position_dodge(width = 0.2)) +
+  
+  # --- overall mean (bold) ---
+  stat_summary(fun = mean,
+               geom = "point",
+               color = "purple",
+               size = 2.5) +
+  
+  # --- overall CI ---
+  stat_summary(fun.data = mean_cl_boot,
+               geom = "errorbar",
+               width = 0.2,
+               color = "black") +
+  
   facet_grid(CueValidity ~ ISIframes) +
+  
   labs(
     title = "Probe Accuracy by Flash Condition, Cue Validity, and ISI",
     x = "Flash Reported",
     y = "Accuracy (RespProbeBinary)"
   ) +
-  theme_bw() +
-  stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2)
-
+  
+  theme_bw()
 
 ggplot(data, aes(x = RespFlash, y = RespProbeBinary)) +
-  geom_jitter(width = 0.1, alpha = 0.3, size = 1) +
-  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  
+  # --- raw data ---
+  geom_jitter(width = 0.05, alpha = 0.2, size = 1) +
+  
+  # --- subject-level means ---
+  stat_summary(aes(group = subject),
+               fun = mean,
+               geom = "point",
+               color = "pink",
+               alpha = 0.5,
+               size = 1.5,
+               position = position_dodge(width = 0.2)) +
+  
+  # --- overall mean (bold) ---
+  stat_summary(fun = mean,
+               geom = "point",
+               color = "purple",
+               size = 2.5) +
+  
+  # --- overall CI ---
+  stat_summary(fun.data = mean_cl_boot,
+               geom = "errorbar",
+               width = 0.2,
+               color = "black") +
+  
   facet_grid(CueValidity ~ dtcolor) +
+  
   labs(
     title = "Probe Accuracy by Flash Condition, Cue Validity, and ISI",
     x = "Flash Reported",
     y = "Accuracy (RespProbeBinary)"
   ) +
-  theme_bw() +
-  stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2)
-
+  
+  theme_bw()
 ## =========== joint prob ===========
 summary_table <- data %>%
   group_by(CueValidity, RespFlashBinary, RespProbeBinary) %>%

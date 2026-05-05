@@ -12,7 +12,7 @@ library(readr)
 
 peaks_list <- list()
 
-sub = "subSH"
+sub = "subAL"
 
 dat <- read.asc(paste0("/Users/ali/Documents/Experiment/DFF_data/",sub,".asc"))
 
@@ -167,7 +167,7 @@ hfig <- ggplot(subset(dfp, ms == 1), aes(x = xc_deg, y = yc_deg)) +
     name = "Count"
   ) +
   labs(
-    title = "Heatmap of Eye Positions",
+    title = "Heatmap of Microsaccade Eye Positions",
     x = "Horizontal",
     y = "Vertical"
   ) +
