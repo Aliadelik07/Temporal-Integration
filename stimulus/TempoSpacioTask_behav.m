@@ -1,7 +1,7 @@
 %% Visual two-flash fusion experiment with spatial probes
 
 clear; clc;
-Screen('Preference', 'SkipSyncTests', 1);
+Screen('Preference', 'SkipSyncTests', 0);
 
 %% ---------------- INITIATION ----------------
 fname = 'subIntro.csv';

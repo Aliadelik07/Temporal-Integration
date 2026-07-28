@@ -167,7 +167,7 @@ end
 
 bar(mat)
 set(gca,'XTickLabel',isi)
-legend(pb)
+%legend(pb)
 title('Probe within ISI')
 
 %% 4. Color × Probe
@@ -191,7 +191,8 @@ legend(pb)
 title('Probe within Color')
 
 %% ---------------- SAVE ----------------
-save('/Users/ali/Documents/Experiment/DFF_analysis/stimulus/trialListIntro.mat', 'trialList');
+save(% Save to .mat file
+save('C:\Users\p06470\Documents\GitHub\Temporal-Integration\stimulus\trialListIntro.mat', 'trialList');
 
 % Set random seed (optional, for reproducibility)
 rng('shuffle'); % or use a fixed number like rng(1)
@@ -200,4 +201,4 @@ rng('shuffle'); % or use a fixed number like rng(1)
 trialList = trialList(randperm(size(trialList, 1), 10), :);
 
 % Save to .mat file
-save('/Users/ali/Documents/Experiment/DFF_analysis/stimulus/trialListIntro.mat', 'trialList');
+save('C:\Users\p06470\Documents\GitHub\Temporal-Integration\stimulus\trialListIntro.mat', 'trialList');
