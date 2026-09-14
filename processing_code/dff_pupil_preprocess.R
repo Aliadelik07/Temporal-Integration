@@ -13,7 +13,7 @@ library(readr)
 
 peaks_list <- list()
 
-sub = "subTI"
+sub = "subJA"
 
 dat <- read.asc(paste0("D:/DFF_data/",sub,"/", sub, ".asc"))
 

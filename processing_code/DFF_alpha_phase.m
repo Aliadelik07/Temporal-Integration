@@ -1,3 +1,6 @@
+
+% This code extracts features of epochs from brainstom database and plots
+
 % Get subjects in the current BST protocol
 subjects_bst = bst_get('ProtocolSubjects');
 SubjectNames = {subjects_bst.Subject.Name};
@@ -5,10 +8,6 @@ SubjectNames = {subjects_bst.Subject.Name};
 % Remove Group analysis
 SubjectNames(contains(SubjectNames,'Group')) = [];
 
-% conditionName = { ...
-%     'stim2_two', 'stim2_one', ...
-%     'stim1_two', 'stim1_one' ...
-% };
 
 ProtocolInfo = bst_get('ProtocolInfo');
 
@@ -18,8 +17,9 @@ if ~exist(outDir, 'dir')
 end
 
 Fs = 512;
-band = [30 50];
+band = [8 12];
 
+%% ===================== EXTRACT ========================
 for ii = 1:length(conditionName)
 
     cond = conditionName{ii};
@@ -47,7 +47,7 @@ for i = 1:length(sFilesERP)
     [F_phase,F_amp,F_band] = getBandFeatures(signal, band, Fs);
 
     % Time x Channels x Subjects
-    allFeature(:,:,i) = F_amp;
+    allFeature(:,:,i) = F_phase;
 
 end
 
@@ -62,12 +62,14 @@ CI95 = 1.96 * SE;
 t = linspace(-0.5, 0.5, size(allFeature,1));
 
 save(fullfile(outDir, ...
-    sprintf('%s_gammaAbs%d%d.mat', cond, band(1), band(2))), ...
+    sprintf('%s_alphaPhase%d%d.mat', cond, band(1), band(2))), ...
     't', 'MeanPhase', 'CI95', 'allFeature');
 
 
 end
 
+
+%% ===================== PLOT ========================
 conds = [0 1 3 5 7 9];
 
 % Load channel info once
@@ -88,11 +90,11 @@ for i = 1:numel(conds)
     hold on
 
     file1 = fullfile(outDir, ...
-        sprintf('stim1_two_%d_gammaAbs%d%d.mat', ...
+        sprintf('stim2_two_%d_alphaPhase%d%d.mat', ...
         n, band(1), band(2)));
 
     file2 = fullfile(outDir, ...
-        sprintf('stim1_one_%d_gammaAbs%d%d.mat', ...
+        sprintf('stim2_one_%d_alphaPhase%d%d.mat', ...
         n, band(1), band(2)));
 
     h1 = [];
@@ -132,14 +134,20 @@ for i = 1:numel(conds)
                   'b','LineWidth',2);
     end
 
+    % First flash onset
     x = xline(0,'--k','LineWidth',1.5);
     x.Annotation.LegendInformation.IconDisplayStyle = 'off';
+    
+    % Second flash onset (ISI = cond * 7 ms)
+    isiSec = n * -7e-3;   % ms -> s
+    x2 = xline(isiSec,'--k','LineWidth',1.5);
+    x2.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
     xlim([-0.2 0.2]);
 
     title(sprintf('ISI %d ms', n*7));
 
-    ylabel('Amplitude (\\muV)');
+    ylabel('Phase (rad)');
 
     if i == numel(conds)
         xlabel('Time (s)');
@@ -170,6 +178,9 @@ sgtitle(sprintf('First flash locked ERP (%s, %d-%d Hz)', ...
     chanName, band(1), band(2)), ...
     'FontSize',16, ...
     'FontWeight','bold');
+
+
+%% ============ Functions =======
 
 function [F_phase,F_amp,F_band] = getBandFeatures(F, band, Fs)
 %GETBANDFEATURES Extract band-limited phase and amplitude.

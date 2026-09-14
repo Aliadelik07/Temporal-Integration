@@ -51,8 +51,8 @@ plot_glm_surface <- function(data, x_var, y_var, z_var, group_var,
     g <- subset(grid, grid[[group_var]] == g_val)
     
     color <- switch(as.character(g_val),
-                    "invalid" = "red",
-                    "valid" = "blue",
+                    "invalid" ="darkblue" ,
+                    "valid" = "darkred",
                     "neutral" = "black",
                     "gray")
     
@@ -86,7 +86,7 @@ plot_glm_surface <- function(data, x_var, y_var, z_var, group_var,
       scene = list(
         xaxis = list(title = x_var),
         yaxis = list(title = y_var),
-        zaxis = list(title = z_var)
+        zaxis = list(title = z_var)#list(title = z_var, range = c(0, 1))
       ),
       legend = list(title = list(text = group_var))
     )
@@ -138,8 +138,8 @@ plot_glm_surface_multi <- function(data, x_var, y_var, z_vars, group_var,
       g <- subset(grid, grid[[group_var]] == g_val)
       
       base_color <- switch(as.character(g_val),
-                           "invalid" = "red",
-                           "valid"   = "blue",
+                           "invalid" ="darkblue" ,
+                           "valid" = "darkred",
                            "neutral" = "black")
       
       opacity_val <- ifelse(z_var == z_vars[1], 0.5, 0.8)
@@ -178,17 +178,22 @@ library(plotly)
 library(gridExtra)
 library(quickpsy)
 library(patchwork)
+library(sjPlot)
+library(lme4)
+library(lmerTest)
 
+subs <- c('subSH', 'subTH','subAL','subJU','subSA','subDI','subBE','subTI','subRO',
+          'subJA')
 
-subs <- c('subSH', 'subTH','subAL','subJU','subSA','subDI','subBE','subTI')
-#subs <- c('subTI')
+#subs <- c('subJA')
 data_list <- list()
 
 for (sub in subs) {
-  df <- read.csv(paste0("D:/DFF_data/",sub,"/", sub, ".csv"))
+  df <- read.csv(paste0("D:/DFF_data/",sub,"/", sub, "RR.csv"))
   df$subject <- sub
   data_list[[sub]] <- df
 }
+
 
 data <- do.call(rbind, data_list)
 
@@ -221,15 +226,27 @@ data$dt_top <- ifelse(data$probe == "bottom", -data$dtcolor, data$dtcolor)
 data$ChoiceTop <- ifelse(data$ResProbe == "top", 1, 0)
 # if they choose top 1 if not 0
 
+# removing outliers
+data_no_outliers <- data %>%
+  filter(
+    if_all(
+      where(is.numeric),
+      ~ . >= quantile(., 0.25, na.rm = TRUE) - 1.5 * IQR(., na.rm = TRUE) &
+        . <= quantile(., 0.75, na.rm = TRUE) + 1.5 * IQR(., na.rm = TRUE)
+    )
+  )
+
 # save data
-write.csv(data, "D:/DFF_data/data.csv", row.names = FALSE)
+write.csv(data, "D:/DFF_data/dataRR.csv", row.names = FALSE)
+
+## ============= Import data ===============
 
 data <- read.csv("D:/DFF_data/data.csv")
 
 ## ============= psychometric curves ===============
 
 thin = 0.001
-thick = 2
+thick = 1
 a = 0.01
 
 
@@ -361,6 +378,10 @@ compute_dprime <- function(df, response_col, group_vars) {
     )
 }
 
+
+
+
+
 d_spatial_isi <- compute_dprime(
   data,
   response_col = "ChoiceTop",
@@ -375,8 +396,8 @@ d_temp_isi <- compute_dprime(
 
 d_spatial_contrast <- compute_dprime(
   data,
-  response_col = "ChoiceTop",
-  group_vars = c("dt_top", "CueValidity")
+  response_col = "RespProbeBinary",
+  group_vars = c("dtcolor", "CueValidity")
 )
 
 d_temp_contrast <- compute_dprime(
@@ -384,6 +405,44 @@ d_temp_contrast <- compute_dprime(
   response_col = "RespFlashBinary",
   group_vars = c("dt_top", "CueValidity")
 )
+
+
+ggplot(d_spatial_contrast,
+       aes(x = dtcolor,
+           y = dprime,
+           color = CueValidity,
+           group = CueValidity)) +
+  aes(x = dtcolor + 1e-6) +
+  geom_smooth(method = "loess", span = 1, se = FALSE, linewidth = 1.2) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
+                width = 0.02,
+                alpha = 0.5) +
+  scale_color_manual(values = c(
+    "valid"   = "darkred",
+    "invalid" = "darkblue",
+    "neutral" = "black"
+  )) +
+  labs(x = "Contrast (chroma)", y = "d'") +
+  theme_classic()
+
+ggplot(subset(d_temp_isi, ISIframes >0),
+       aes(x = ISIframes,
+           y = dprime,
+           color = CueValidity,
+           group = CueValidity)) +
+  geom_smooth(method = "loess", span = 1.2, se = FALSE, linewidth = 1.2) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
+                width = 0.02,
+                alpha = 0.5) +
+  scale_color_manual(values = c(
+    "valid"   = "darkred",
+    "invalid" = "darkblue",
+    "neutral" = "black"
+  )) +
+  labs(x = "ISI (ms)", y = "d'") +
+  theme_classic()
 
 
 p_spatial_isi <- ggplot(d_spatial_isi,
@@ -451,7 +510,7 @@ p_temp_contrast <- ggplot(d_temp_contrast,
 
 (p_temp_isi   | p_spatial_contrast)
   plot_layout(guides = "collect") &
-  theme(legend.position = "top")
+  theme(legend.position = "right")
 ## =========== Spheres ===========
 
 plot_glm_surface(
@@ -598,7 +657,7 @@ ggplot(summary_data, aes(x = RespFlashBinary, y = mean, color = CueValidity)) +
 ## PSE ----------------------
 
 pse_all <- data %>%
-  group_by(CueValidity) %>% # add subject, if by subject 
+  group_by(CueValidity,subject) %>% # add subject, if by subject 
   do({
     m1 <- glm(ChoiceTop ~ dt_top, data = ., family = binomial)
     m2 <- glm(RespFlashBinary ~ ISIframes, data = ., family = binomial)
@@ -621,6 +680,23 @@ ggplot(pse_all, aes(x = PSE_isi, fill = CueValidity)) +
 ggplot(pse_all, aes(x = PSE_dt, fill = CueValidity)) +
   geom_density(alpha = 0.4) +
   labs(title = "Kernel density of PSE")
+
+
+
+pse_wide <- pse_all %>%
+  select(subject, CueValidity, PSE_isi) %>%
+  pivot_wider(names_from = CueValidity, values_from = PSE_isi)
+
+# paired t-test
+t.test(pse_wide$valid, pse_wide$invalid, paired = TRUE)
+
+# or nonparametric if PSEs aren't normally distributed / small N
+wilcox.test(pse_wide$Valid, pse_wide$Invalid, paired = TRUE)
+
+
+
+m <- lmer(PSE_isi ~ CueValidity + (1 | subject), data = pse_all)
+summary(m)
 
 
 ## MAX effect ----------------------
@@ -710,13 +786,23 @@ p2<-ggplot(subset_data, aes(x = factor(RespFlashBinary), fill = CueValidity)) +
 data <- read.csv("D:/DFF_data/data.csv")
 
 library(lmerTest)
+library(dplyr)
+
+data <- data %>%
+  arrange(subject, Trial) %>%
+  group_by(subject) %>%
+  mutate(
+    ISIframes_lag1 = lag(ISIframes),
+    dt_top_lag1 = lag(dt_top)
+  ) %>%
+  ungroup()
 
 data$CueValidity <- factor(data$CueValidity)
 data$CueValidity <- relevel(data$CueValidity, ref = "neutral")
 data$numFlash <- factor(data$RespFlashBinary)
 
 spaceModel <- glmer(
-  ChoiceTop ~ CueValidity * ISIframes + CueValidity * dt_top  + Trial + (1 | subject),
+  ChoiceTop ~ CueValidity * ISIframes * ISIframes_lag1 + CueValidity * dt_top * dt_top_lag1  + Trial + (1 | subject),
   data = data,
   family = binomial(link = "logit")
 )
@@ -724,7 +810,7 @@ spaceModel <- glmer(
 summary(spaceModel)
 
 timeModel <- glmer(
-  RespFlashBinary ~ CueValidity * ISIframes + CueValidity * dtcolor + Trial + (1 | subject),
+  RespFlashBinary ~ CueValidity * ISIframes + ISIframes_lag1 + CueValidity * dtcolor + dt_top_lag1 + Trial + (1 | subject),
   data = data,
   family = binomial(link = "logit")
 )
@@ -954,3 +1040,415 @@ legend("topleft",
        col = cols,
        lwd = 3)
  
+
+
+# lag model -----------
+
+
+
+data <- data %>%
+  arrange(subject, Trial) %>%
+  group_by(subject) %>%
+  mutate(
+    lag_RespFlashBinary = lag(RespFlashBinary)
+  ) %>%
+  ungroup()
+
+model <- glmer(
+  RespFlashBinary ~ CueValidity * ISIframes +
+    lag_RespFlashBinary +
+    (1 | subject),
+  data = data,
+  family = binomial
+)
+
+summary(model)
+
+
+
+data <- data %>%
+  arrange(subject, Trial) %>%
+  group_by(subject) %>%
+  mutate(
+    lag_ISIframes = lag(ISIframes),
+    lag_RespFlashBinary = lag(RespFlashBinary),
+    lag_dtcolor = lag(dtcolor),
+    lag_RespProbeBinary = lag(RespFlashBinary)
+  ) %>%
+  ungroup()
+
+model <- glmer(
+  RespFlashBinary ~ CueValidity * ISIframes + lag_RespFlashBinary + lag_ISIframes + dtcolor +(1 | subject),
+  data = data,
+  family = binomial
+)
+
+summary(model)
+
+
+p <- plot_model(
+  model,
+  type = "est",
+  show.values = TRUE,
+  value.offset = .3
+)+
+  theme_classic()
+p
+p +
+  scale_y_discrete(
+    labels = c(
+      "CueValidity" = "Cue validity",
+      "ISIframes" = "ISI (frames)",
+      "lag_RespFlashBinary" = "Previous response",
+      "lag_ISIframes" = "Previous ISI (frames)",
+      "dtcolor" = "Delta color"
+    )
+  ) 
+
+
+
+model <- glmer(
+  RespProbeBinary ~ CueValidity * dtcolor  + lag_RespProbeBinary + lag_ISIframes +ISIframes +(1 | subject),
+  data = data,
+  family = binomial
+)
+
+summary(model)
+
+plot_model(
+  model,
+  type = "est",
+  show.values = TRUE,
+  value.offset = .3
+) +
+  theme_classic()
+
+
+
+## ----------- recovery rate ---------
+data$RR <- data$peakAmp2/data$peakAmp1
+data$dLatency <- data$peakLat2 - data$peakLat1
+
+plot_glm_surface(
+  data,
+  x_var = "dtcolor",
+  y_var = "ISIframes",
+  z_var = "RR",
+  group_var = "CueValidity"
+)
+
+plot_glm_surface(
+  data,
+  x_var = "dtcolor",
+  y_var = "ISIframes",
+  z_var = "dLatency",
+  group_var = "CueValidity"
+)
+
+
+
+model <- glmer(
+  RespFlashBinary ~ RR * CueValidity +(1 | subject),
+  data = data,
+  family = binomial
+)
+
+summary(model)
+
+
+
+
+
+sumdat <- data %>%
+  group_by(ISIframes, CueValidity) %>%
+  summarise(
+    mean_RR = mean(RR, na.rm = TRUE),
+    se_RR = sd(RR, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+ggplot(sumdat,
+       aes(x = ISIframes,
+           y = mean_RR,
+           color = CueValidity,
+           group = CueValidity)) +
+  geom_point(size = 2) +
+  geom_errorbar(
+    aes(ymin = mean_RR - se_RR,
+        ymax = mean_RR + se_RR),
+    width = 2
+  ) +
+  scale_color_manual(values = c(
+    "valid"   = "darkred",
+    "invalid" = "darkblue",
+    "neutral" = "black"
+  )) +
+  labs(
+    x = "ISI frames",
+    y = "Mean RR ± SE",
+    color = "Cue Validity"
+  ) +
+  theme_classic()
+
+
+library(pROC)
+thresholds <- data %>%
+  group_by(CueValidity) %>%
+  do({
+    roc_obj <- roc(.$RespFlashBinary, .$RR)
+    
+    data.frame(
+      threshold = coords(
+        roc_obj,
+        "best",
+        best.method = "youden",
+        ret = "threshold"
+      )
+    )
+  })
+
+thresholds
+
+model <- lmer(
+  RR ~ CueValidity  * dtcolor + CueValidity  * ISIframes +(1 | subject),
+  data = data
+)
+
+summary(model)
+
+
+## ============== mediation analysis ==============
+library(lme4)
+
+med_model <- lmer(
+  RR ~ ISIframes * CueValidity + (1 | subject),
+  data = data
+)
+
+summary(med_model)
+
+out_model <- glmer(
+  RespFlashBinary ~ RR + ISIframes * CueValidity +
+    (1 | subject),
+  data = data,
+  family = binomial
+)
+
+summary(out_model)
+
+library(mediation)
+
+med.fit <- lm(
+  RR ~ ISIframes * CueValidity,
+  data = data
+)
+
+out.fit <- glm(
+  RespFlashBinary ~ RR * CueValidity + ISIframes * CueValidity,
+  data = data,
+  family = binomial
+)
+
+med.out <- mediate(
+  med.fit,
+  out.fit,
+  treat = "ISIframes",
+  mediator = "RR",
+  boot = TRUE,
+  sims = 1000
+)
+
+summary(med.out)
+
+
+med_df <- data.frame(
+  Effect = c("ACME", "ADE", "Total Effect"),
+  Estimate = c(
+    med.out$d.avg,
+    med.out$z.avg,
+    med.out$tau.coef
+  ),
+  Lower = c(
+    med.out$d.avg.ci[1],
+    med.out$z.avg.ci[1],
+    med.out$tau.ci[1]
+  ),
+  Upper = c(
+    med.out$d.avg.ci[2],
+    med.out$z.avg.ci[2],
+    med.out$tau.ci[2]
+  )
+)
+
+ggplot(med_df, aes(x = Effect, y = Estimate)) +
+  geom_point(size = 4) +
+  geom_errorbar(
+    aes(ymin = Lower, ymax = Upper),
+    width = .15
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_classic() +
+  labs(
+    y = "Effect Estimate",
+    x = "",
+    title = "Mediation Analysis"
+  )
+
+
+
+##  --------- plot recovery rate ---------
+sumdat <- data %>%
+  group_by(ISIframes, CueValidity, RespFlashBinary) %>%
+  summarise(
+    mean_RR = mean(RR, na.rm = TRUE),
+    se_RR = sd(RR, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+ggplot(data,
+       aes(x = ISIframes,
+           y = RR,
+           color = CueValidity,
+           group = CueValidity)) +
+  #geom_hline(yintercept = 0.87, linetype = "dashed", color = "black") +
+  #geom_hline(yintercept = 0.57, linetype = "dashed", color = "black") +
+  #geom_hline(yintercept = 0.50, linetype = "dashed", color = "black") +
+  
+  geom_smooth(method = "lm", formula = y ~ poly(x, 1), se = FALSE, linewidth = 1.2) +
+  
+  geom_point(
+    data = sumdat,
+    aes(y = mean_RR),
+    size = 2
+  ) +
+  
+  geom_errorbar(
+    data = sumdat,
+    aes(
+      y = mean_RR,
+      ymin = mean_RR - se_RR,
+      ymax = mean_RR + se_RR
+    ),
+    width = 2,
+    linewidth = 0.6
+  ) +
+  
+  scale_color_manual(values = c(
+    "valid"   = "darkred",
+    "invalid" = "darkblue",
+    "neutral" = "black"
+  )) +
+  labs(
+    x = "ISI (ms)",
+    y = "Recovery Rate"
+  ) + #scale_y_continuous(limits = c(-0.5, 2)) +
+  theme_classic() + facet_wrap(~RespFlashBinary)
+
+
+
+summary_data_RR <- data %>%
+  group_by(RespFlashBinary, CueValidity) %>%
+  summarise(
+    meanRR = mean(RR, na.rm = TRUE),
+    seRR = sd(RR, na.rm = TRUE) / sqrt(n()),
+    meanDL = mean(dLatency, na.rm = TRUE),
+    seDL = sd(dLatency, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+ggplot(summary_data_RR, aes(x = RespFlashBinary, y = meanRR, color = CueValidity)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = CueValidity)) +
+  geom_errorbar(aes(ymin = meanRR - seRR, ymax = meanRR + seRR), width = 0.1) +
+  scale_x_continuous(limits = c(0, 1), breaks = c(0, 1)) +
+  labs(
+    x = "Number of flash",
+    y = "Recovery Rate",
+    color = "CueValidity"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = c(0.8, 0.2),   # inside (right-bottom area)
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+
+ggplot(summary_data_RR, aes(x = RespFlashBinary, y = meanDL, color = CueValidity)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = CueValidity)) +
+  geom_errorbar(aes(ymin = meanDL - seDL, ymax = meanDL + seDL), width = 0.1) +
+  scale_x_continuous(limits = c(0, 1), breaks = c(0, 1)) +
+  labs(
+    x = "Number of flash",
+    y = "Recovery Latency",
+    color = "CueValidity"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = c(0.8, 0.2),   # inside (right-bottom area)
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+
+## ============== Bootstrap ====================
+
+# if you want to bootstrap increase the nboot
+
+psych_plot <- function(data, x, y, x_lab, y_lab, nboot=1) {
+  set.seed(123)
+  X <- deparse(substitute(x)); Y <- deparse(substitute(y))
+  d <- data.frame(x=data[[X]], k=data[[Y]],
+                  subject=data$subject, CueValidity=data$CueValidity)
+  cues <- c("valid","invalid","neutral"); subs <- unique(d$subject)
+  
+  pse <- \(z) quickpsy(z,x=x,k=k,fun=logistic_fun,prob=.5)$thresholds$thre[1]
+  
+  boot <- lapply(1:nboot,\(b) {
+    z <- d[unlist(lapply(sample(subs,length(subs),TRUE),
+                         \(s) which(d$subject==s))),]
+    list(
+      pse=setNames(sapply(cues,\(c) pse(z[z$CueValidity==c,])),cues),
+      curve=z %>% group_by(CueValidity,x) %>%
+        summarise(P=mean(k),.groups="drop"))
+  })
+  
+  bc <- bind_rows(lapply(boot,`[[`,"curve")) %>%
+    group_by(CueValidity,x) %>%
+    summarise(mean=mean(P),SE=sd(P),.groups="drop")
+  
+  curves <- bind_rows(lapply(cues,\(c) {
+    f=quickpsy(d[d$CueValidity==c,],x=x,k=k,fun=logistic_fun)
+    cbind(f$curves,CueValidity=c)
+  }))
+  
+  p <- ggplot(curves,aes(x,y,colour=CueValidity)) +
+    geom_line(linewidth=1.2) +
+    geom_point(data=bc,aes(x,mean,colour=CueValidity),
+               inherit.aes=FALSE) +
+    geom_errorbar(data=bc,aes(x,ymin=mean-SE,ymax=mean+SE,
+                              colour=CueValidity),
+                  width=0,inherit.aes=FALSE) +
+    scale_y_continuous(limits = c(0, 1)) +
+    scale_colour_manual(values = c(
+      valid = "darkred",
+      invalid = "darkblue",
+      neutral = "black"
+    )) +
+    labs(x = x_lab , y = y_lab , colour = "") +
+    theme_classic() +
+    theme(legend.position = "top", aspect.ratio = 1)
+  
+  sp <- d %>% group_by(subject,CueValidity) %>%
+    group_modify(~data.frame(PSE=pse(.x))) %>%
+    tidyr::pivot_wider(names_from=CueValidity,values_from=PSE)
+  
+  list(plot=p,wilcoxon=wilcox.test(sp$valid,sp$invalid,
+                                   paired=TRUE,exact=FALSE))
+}
+
+res <- psych_plot(data, ISIframes, RespFlashBinary,"ISI (ms)","P(Two)")
+res$plot
+res$wilcoxon
+
+res <- psych_plot(data, dt_top, ChoiceTop,"Contrast (%)","P(Top)")
+res$plot
+res$wilcoxon
+

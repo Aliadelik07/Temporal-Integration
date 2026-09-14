@@ -1,4 +1,17 @@
 
+
+sStudies = bst_get('ProtocolStudies');
+
+conditionNames = strings(numel(sStudies.Study),1);
+
+for i = 1:numel(sStudies.Study)
+    conditionNames(i) = string(sStudies.Study(i).Condition);
+end
+
+conditionNames = unique(conditionNames);
+conditionNames = conditionNames(~startsWith(conditionNames,"@"));
+disp(conditionNames);
+
 % Get subjects in the cutrrent BST protocol
 subjects_bst = bst_get('ProtocolSubjects') ; 
 SubjectNames = {subjects_bst.Subject.Name};
@@ -6,21 +19,13 @@ SubjectNames = {subjects_bst.Subject.Name};
 % Removes Group analysis if any
 SubjectNames(contains(SubjectNames,'Group')) = [] ; 
 
-% % Initialize Conditions of interests
-% conditionName = { ...
-%     'stim2_two', 'stim2_one', ...
-%     'stim1_two', 'stim1_one' ...
-% };
-
-% conditionName = EventsMarkers;
-
 
 
 % Loop over each condition
-for ii = 1:length(conditionName)
+for ii = 1:length(conditionNames)
 
     % Select current condition
-    cond = conditionName(ii);
+    cond = conditionNames(ii);
 
     % Process: Select data files
     sFilesERP = bst_process('CallProcess', 'process_select_files_data', [], [], ...
@@ -32,30 +37,17 @@ for ii = 1:length(conditionName)
         'includecommon', 0);
 
     %% -------------- ERP -----------------
-     % Process: Ignore file names with tag: Avg
-    sFilesERP = bst_process('CallProcess', 'process_select_tag', sFilesERP, [], ...
-        'tag',    'Avg', ...
-        'search', 2, ...
-        'select', 2);
-
     % Process: Average+Stderr: By folder (grand average)
-    sFilesERP = bst_process('CallProcess', 'process_average', sFilesERP, [], ...
+    sFilesERPavg = bst_process('CallProcess', 'process_average', sFilesERP, [], ...
         'avgtype',       4, ...  % By folder (grand average)
         'avg_func',      7, ...  % Arithmetic average + Standard error
         'weighted',      0, ...
         'keepevents',    0);
 
-    % Process: Z-score transformation: [-400ms,-2ms]
-    sFilesERP = bst_process('CallProcess', 'process_baseline_norm', sFilesERP, [], ...
-        'baseline',    Epoch_baseline, ...
-        'sensortypes', 'MEG, EEG', ...
-        'method',      'zscore', ...  % Z-score transformation:    x_std = (x - &mu;) / &sigma;
-        'overwrite',   0);
-
 
     %% -------------- PSD ----------------
     
-    sFilesPSD = bst_process('CallProcess', 'process_select_files_timefreq', [], [], ...
+    sFilesPSD = bst_process('CallProcess', 'process_select_files_timefreq', sFilesERP, [], ...
                 'subjectname',   [], ...
                 'condition',     cond{1}, ...
                 'tag',           'multiply', ...
