@@ -77,9 +77,14 @@ CI95 = 1.96 * SE;
 
 t = linspace(-0.5, 0.5, size(allFeature,1));
 
-save(fullfile(outDir, ...
-    sprintf('%s_gammaAbs%d%d.mat', cond, band(1), band(2))), ...
-    't', 'MeanAmp', 'CI95', 'allFeature');
+% compressing files
+MeanAmp = single(MeanAmp);
+CI95 = single(CI95);
+allFeature = single(allFeature);
+t = single(t);
+
+save(fullfile(outDir, sprintf('%s_Abs%d%d.mat', cond, band(1), band(2))), ...
+    't', 'MeanAmp', 'CI95', 'allFeature', '-v7');
 
 fprintf('%d/%d (%s) \n',ii, length(conditionNames), cond);
 

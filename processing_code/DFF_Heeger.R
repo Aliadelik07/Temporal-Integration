@@ -238,7 +238,7 @@ pred <- fits %>%
          (x^n + halfx^n))
   )
 
-ggplot(
+fig <- ggplot(
   p_temp_isi,
   aes(x = x, y = dprime, colour = CueValidity)
 ) +
@@ -264,3 +264,4 @@ ggplot(
   theme_classic() +
   theme(legend.position = "top", aspect.ratio = 1)
 
+saveRDS(fig, "C:/Users/p06470/Desktop/NDmodel.rds")

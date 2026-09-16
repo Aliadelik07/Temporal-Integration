@@ -182,8 +182,9 @@ library(sjPlot)
 library(lme4)
 library(lmerTest)
 
-subs <- c('subSH', 'subTH','subAL','subJU','subSA','subDI','subBE','subTI','subRO',
+subs <- c('subSH', 'subTH','subAL','subJU','subSA','subDI','subBE','subTI',
           'subJA')
+
 
 #subs <- c('subJA')
 data_list <- list()
@@ -339,7 +340,7 @@ p_temp_isi <- ggplot(data, aes(x = ISIframes, y = RespFlashBinary, color = CueVa
   labs(title = "", y = "P(Two)", x = "ISI (ms)") +
   theme_bw() +
   theme(legend.position = "top") +
-  coord_fixed(ratio = 9*7, xlim = c(0, 9*7), ylim = c(0, 1))
+  coord_fixed(ratio = 9*7, xlim = c(0, 9*7), ylim = c(0, 1)) #+ facet_wrap(~subject)
 p_temp_isi 
 
 
@@ -349,168 +350,7 @@ p_temp_isi
     legend.position = "top",
     plot.title = element_blank()
   )
-## ============= dprime curves ===============
 
-
-
-compute_dprime <- function(df, response_col, group_vars) {
-  eps <- 1e-6
-  df %>%
-    group_by(across(all_of(group_vars))) %>%
-    summarise(
-      n = n(),
-      p = mean(.data[[response_col]], na.rm = TRUE),
-      se_p = sqrt(p * (1 - p) / n),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      p = pmin(pmax(p, eps), 1 - eps),
-      
-      z = qnorm(p),
-      dprime = sqrt(2) * z,
-      
-      # delta method
-      phi_z = dnorm(z),
-      se_dprime = sqrt(2) * se_p / phi_z,
-      
-      ci_low = dprime - 1.96 * se_dprime,
-      ci_high = dprime + 1.96 * se_dprime
-    )
-}
-
-
-
-
-
-d_spatial_isi <- compute_dprime(
-  data,
-  response_col = "ChoiceTop",
-  group_vars = c("ISIframes", "CueValidity")
-)
-
-d_temp_isi <- compute_dprime(
-  data,
-  response_col = "RespFlashBinary",
-  group_vars = c("ISIframes", "CueValidity")
-)
-
-d_spatial_contrast <- compute_dprime(
-  data,
-  response_col = "RespProbeBinary",
-  group_vars = c("dtcolor", "CueValidity")
-)
-
-d_temp_contrast <- compute_dprime(
-  data,
-  response_col = "RespFlashBinary",
-  group_vars = c("dt_top", "CueValidity")
-)
-
-
-ggplot(d_spatial_contrast,
-       aes(x = dtcolor,
-           y = dprime,
-           color = CueValidity,
-           group = CueValidity)) +
-  aes(x = dtcolor + 1e-6) +
-  geom_smooth(method = "loess", span = 1, se = FALSE, linewidth = 1.2) +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
-                width = 0.02,
-                alpha = 0.5) +
-  scale_color_manual(values = c(
-    "valid"   = "darkred",
-    "invalid" = "darkblue",
-    "neutral" = "black"
-  )) +
-  labs(x = "Contrast (chroma)", y = "d'") +
-  theme_classic()
-
-ggplot(subset(d_temp_isi, ISIframes >0),
-       aes(x = ISIframes,
-           y = dprime,
-           color = CueValidity,
-           group = CueValidity)) +
-  geom_smooth(method = "loess", span = 1.2, se = FALSE, linewidth = 1.2) +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
-                width = 0.02,
-                alpha = 0.5) +
-  scale_color_manual(values = c(
-    "valid"   = "darkred",
-    "invalid" = "darkblue",
-    "neutral" = "black"
-  )) +
-  labs(x = "ISI (ms)", y = "d'") +
-  theme_classic()
-
-
-p_spatial_isi <- ggplot(d_spatial_isi,
-                        aes(x = ISIframes,
-                            y = dprime,
-                            color = CueValidity)) +
-  
-  geom_line(linewidth = 1) +
-  
-  geom_point(size = 2) +
-  
-  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
-                width = 0.2,
-                alpha = 0.5) +
-  
-  labs(title = "Spatial Resolution (d')",
-       y = "d'",
-       x = "ISI (ms)") +
-  
-  theme_bw()
-
-p_spatial_contrast <- ggplot(d_spatial_contrast,
-                             aes(x = dt_top,
-                                 y = dprime,
-                                 color = CueValidity)) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
-                width = 0.02,
-                alpha = 0.5) +
-  labs(x = "Contrast (chroma)", y = "d'") +
-  theme_bw()
-
-p_temp_isi <- ggplot(d_temp_isi,
-                     aes(x = ISIframes,
-                         y = dprime,
-                         color = CueValidity)) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
-                width = 0.2,
-                alpha = 0.5) +
-  labs(title = "Temporal Resolution (d')",
-       y = "d'",
-       x = "ISI (ms)") +
-  theme_bw()
-
-p_temp_contrast <- ggplot(d_temp_contrast,
-                          aes(x = dt_top,
-                              y = dprime,
-                              color = CueValidity)) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = ci_low, ymax = ci_high),
-                width = 0.02,
-                alpha = 0.5) +
-  labs(x = "Contrast (chroma)", y = "d'") +
-  theme_bw()
-
-
-(p_spatial_isi | p_spatial_contrast) /
-  (p_temp_isi    | p_temp_contrast) +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "top")
-
-(p_temp_isi   | p_spatial_contrast)
-  plot_layout(guides = "collect") &
-  theme(legend.position = "right")
 ## =========== Spheres ===========
 
 plot_glm_surface(
@@ -1392,7 +1232,7 @@ ggplot(summary_data_RR, aes(x = RespFlashBinary, y = meanDL, color = CueValidity
 
 # if you want to bootstrap increase the nboot
 
-psych_plot <- function(data, x, y, x_lab, y_lab, nboot=1) {
+psych_plot <- function(data, x, y, x_lab, y_lab, nboot=10) {
   set.seed(123)
   X <- deparse(substitute(x)); Y <- deparse(substitute(y))
   d <- data.frame(x=data[[X]], k=data[[Y]],
@@ -1452,3 +1292,4 @@ res <- psych_plot(data, dt_top, ChoiceTop,"Contrast (%)","P(Top)")
 res$plot
 res$wilcoxon
 
+saveRDS(fig, "C:/Users/p06470/Desktop/logit.rds")

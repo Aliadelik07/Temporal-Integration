@@ -1,4 +1,3 @@
-
 % Get subjects in the current BST protocol
 subjects_bst = bst_get('ProtocolSubjects');
 SubjectNames = {subjects_bst.Subject.Name};
@@ -26,7 +25,12 @@ end
 
 Fs = 512;
 band = [30 90];
-chanName = 'Pz';
+
+% ---- Channels to average ----
+% chanSel   = {'PO7','PO3','POz','O1','Oz','POz','O2','PO4','PO8'}; chanLabel = 'Occipital';
+% chanSel   = {'O2','PO4','PO8'}; chanLabel = 'Occipital Right';
+% chanSel   = {'PO7','PO3','O1'}; chanLabel = 'Occipital Left';
+chanSel   = {'PO7','PO3','O1','O2','PO4','PO8'}; chanLabel = 'Laterized Occipital';
 
 %% ================= SETUP (shared across all figures) =================
 
@@ -35,14 +39,19 @@ f = dir(fullfile(ProtocolInfo.STUDIES, '**', '*channel.mat'));
 f = f(1,1);
 chan = load(fullfile(f.folder,f.name));
 chanNames = {chan.Channel.Name};
-ch = find(strcmp(chanNames, chanName));
+
+[tf, loc] = ismember(chanSel, chanNames);
+if ~all(tf)
+    error('Channel(s) not found in channel file: %s', strjoin(chanSel(~tf), ', '));
+end
+ch = loc;   % vector of channel indices to be averaged
 
 conds      = [0 1 3 5 7 9];
 validities = {'valid','neutral','invalid'};
 percepts   = {'one','two'};
 
 % ---- Preload every data file exactly once into a cache ----
-% cache.(percept).(validity)(condIdx) = loaded struct (or [] if missing)
+% cache.(percept).(validity){condIdx} = loaded struct (or [] if missing)
 cache = struct();
 for p = 1:numel(percepts)
     percept = percepts{p};
@@ -51,7 +60,7 @@ for p = 1:numel(percepts)
         for i = 1:numel(conds)
             n = conds(i);
             fpath = fullfile(outDir, ...
-                sprintf('stim1_%s_%d_%s_gammaAbs%d%d.mat', ...
+                sprintf('stim1_%s_%d_%s_Abs%d%d.mat', ...
                 percept, n, validity, band(1), band(2)));
             if exist(fpath,'file')
                 cache.(percept).(validity){i} = load(fpath);
@@ -88,7 +97,7 @@ for i = 1:numel(conds)
 end
 
 sgtitle(sprintf('First flash locked ERP (%s, %d-%d Hz)', ...
-    chanName, band(1), band(2)), 'FontSize',16, 'FontWeight','bold');
+    chanLabel, band(1), band(2)), 'FontSize',16, 'FontWeight','bold');
 
 %% ================= FIGURE 2: per-validity (color=validity, style=one/two) ==
 
@@ -113,19 +122,21 @@ for i = 1:numel(conds)
 
         S1 = cache.two.(validity){i};
         if ~isempty(S1)
-            h = plotShaded(S1.t, S1.MeanAmp(:,ch), S1.CI95(:,ch), vColor, styleTwo, 1.8, 0.1);
+            h = plotShaded(S1.t, chanAvg(S1.MeanAmp,ch), chanAvg(S1.CI95,ch), ...
+                vColor, styleTwo, 1.8, 0.1);
             if i == 1
-                allHandles(end+1) = h; 
-                allLabels{end+1} = sprintf('2 flashes - %s', validity);
+                allHandles(end+1) = h; %#ok<SAGROW>
+                allLabels{end+1} = sprintf('2 flashes - %s', validity); %#ok<SAGROW>
             end
         end
 
         S2 = cache.one.(validity){i};
         if ~isempty(S2)
-            h = plotShaded(S2.t, S2.MeanAmp(:,ch), S2.CI95(:,ch), vColor, styleOne, 1.8, 0.1);
+            h = plotShaded(S2.t, chanAvg(S2.MeanAmp,ch), chanAvg(S2.CI95,ch), ...
+                vColor, styleOne, 1.8, 0.1);
             if i == 1
-                allHandles(end+1) = h;
-                allLabels{end+1} = sprintf('1 flash - %s', validity);
+                allHandles(end+1) = h; %#ok<SAGROW>
+                allLabels{end+1} = sprintf('1 flash - %s', validity); %#ok<SAGROW>
             end
         end
     end
@@ -143,7 +154,7 @@ lgd.Position = [0.15 0.005 0.7 0.03];
 lgd.Box = 'off';
 
 sgtitle(sprintf('First flash locked ERP (%s, %d-%d Hz)', ...
-    chanName, band(1), band(2)), 'FontSize',16, 'FontWeight','bold');
+    chanLabel, band(1), band(2)), 'FontSize',16, 'FontWeight','bold');
 
 %% ================= FIGURE 3: aggregated across all ISIs =================
 
@@ -169,16 +180,16 @@ for p = 1:numel(percepts)
         valid_i = ~cellfun(@isempty, entries);
         if ~any(valid_i), continue; end
 
-        allMean = cell2mat(cellfun(@(s) s.MeanAmp(:,ch), entries(valid_i), 'UniformOutput', false));
-        allCI   = cell2mat(cellfun(@(s) s.CI95(:,ch),   entries(valid_i), 'UniformOutput', false));
+        allMean = cell2mat(cellfun(@(s) chanAvg(s.MeanAmp,ch), entries(valid_i), 'UniformOutput', false));
+        allCI   = cell2mat(cellfun(@(s) chanAvg(s.CI95,ch),   entries(valid_i), 'UniformOutput', false));
         tRef    = entries{find(valid_i,1)}.t;
 
         meanWave = mean(allMean, 2, 'omitnan');
         ciWave   = mean(allCI, 2, 'omitnan');
 
         hLine = plotShaded(tRef, meanWave, ciWave, c, ls, 2.5, 0.12);
-        h(end+1) = hLine;
-        labels{end+1} = sprintf('%s %s', [upper(percept(1)) percept(2:end)], cue);
+        h(end+1) = hLine; %#ok<SAGROW>
+        labels{end+1} = sprintf('%s %s', [upper(percept(1)) percept(2:end)], cue); %#ok<SAGROW>
     end
 end
 
@@ -186,7 +197,7 @@ xline(0,'--k','LineWidth',1.5,'HandleVisibility','off');
 xlabel('Time (s)');
 ylabel('Amplitude (\muV)');
 legend(h, labels, 'Location','eastoutside');
-title(sprintf('Aggregated Across ISIs (%s)', chanName));
+title(sprintf('Aggregated Across ISIs (%s)', chanLabel));
 grid on; box off
 
 
@@ -206,10 +217,16 @@ grid on; box off
 
 legend([h1 h2], {'Perceived 2 flashes','Perceived 1 flash'}, 'Location','best');
 
-title(sprintf('First flash locked ERP — averaged across validity & ISI (%s, %d-%d Hz)', ...
-    chanName, band(1), band(2)));
+title(sprintf('First flash locked ERP (%s, %d-%d Hz)', ...
+    chanLabel, band(1), band(2)));
 
 %% ================= LOCAL HELPER FUNCTIONS =================
+
+function y = chanAvg(M, ch)
+% Collapse the selected channels into a single waveform by averaging.
+% M is [nTime x nChannels]; ch is a vector of column indices.
+    y = mean(M(:,ch), 2, 'omitnan');
+end
 
 function h = plotAvgAcrossValidityAndISI(cache, percept, validities, nConds, ch, color)
 % Averages MeanAmp/CI95 across BOTH validities and all ISI conditions
@@ -231,8 +248,8 @@ function h = plotAvgAcrossValidityAndISI(cache, percept, validities, nConds, ch,
     end
 
     t = entries{1}.t;
-    meanCells = cellfun(@(s) s.MeanAmp(:,ch), entries, 'UniformOutput', false);
-    ciCells   = cellfun(@(s) s.CI95(:,ch),   entries, 'UniformOutput', false);
+    meanCells = cellfun(@(s) chanAvg(s.MeanAmp,ch), entries, 'UniformOutput', false);
+    ciCells   = cellfun(@(s) chanAvg(s.CI95,ch),   entries, 'UniformOutput', false);
     meanStack = cat(3, meanCells{:});
     ciStack   = cat(3, ciCells{:});
 
@@ -262,8 +279,8 @@ function h = plotAvgAcrossValidity(cache, percept, validities, condIdx, ch, colo
     entries = entries(valid_i);
 
     t = entries{1}.t;
-    meanCells = cellfun(@(s) s.MeanAmp(:,ch), entries, 'UniformOutput', false);
-    ciCells   = cellfun(@(s) s.CI95(:,ch),   entries, 'UniformOutput', false);
+    meanCells = cellfun(@(s) chanAvg(s.MeanAmp,ch), entries, 'UniformOutput', false);
+    ciCells   = cellfun(@(s) chanAvg(s.CI95,ch),   entries, 'UniformOutput', false);
     meanStack = cat(3, meanCells{:});
     ciStack   = cat(3, ciCells{:});
 
