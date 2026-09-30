@@ -996,41 +996,6 @@ model <- glmer(
 summary(model)
 
 
-
-
-
-sumdat <- data %>%
-  group_by(ISIframes, CueValidity) %>%
-  summarise(
-    mean_RR = mean(RR, na.rm = TRUE),
-    se_RR = sd(RR, na.rm = TRUE) / sqrt(n()),
-    .groups = "drop"
-  )
-
-ggplot(sumdat,
-       aes(x = ISIframes,
-           y = mean_RR,
-           color = CueValidity,
-           group = CueValidity)) +
-  geom_point(size = 2) +
-  geom_errorbar(
-    aes(ymin = mean_RR - se_RR,
-        ymax = mean_RR + se_RR),
-    width = 2
-  ) +
-  scale_color_manual(values = c(
-    "valid"   = "darkred",
-    "invalid" = "darkblue",
-    "neutral" = "black"
-  )) +
-  labs(
-    x = "ISI frames",
-    y = "Mean RR ± SE",
-    color = "Cue Validity"
-  ) +
-  theme_classic()
-
-
 library(pROC)
 thresholds <- data %>%
   group_by(CueValidity) %>%
@@ -1057,7 +1022,7 @@ model <- lmer(
 summary(model)
 
 
-## ============== mediation analysis ==============
+## ============== mediation RR ==============
 library(lme4)
 
 med_model <- lmer(
@@ -1154,7 +1119,7 @@ ggplot(data,
   #geom_hline(yintercept = 0.57, linetype = "dashed", color = "black") +
   #geom_hline(yintercept = 0.50, linetype = "dashed", color = "black") +
   
-  geom_smooth(method = "lm", formula = y ~ poly(x, 1), se = FALSE, linewidth = 1.2) +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, linewidth = 1.2) +
   
   geom_point(
     data = sumdat,
@@ -1182,7 +1147,7 @@ ggplot(data,
     x = "ISI (ms)",
     y = "Recovery Rate"
   ) + #scale_y_continuous(limits = c(-0.5, 2)) +
-  theme_classic() + facet_wrap(~RespFlashBinary)
+  theme_classic() #+ facet_wrap(~RespFlashBinary)
 
 
 

@@ -15,16 +15,14 @@ end
 
 % INITIALIZATION
 Fs = 512;
-band = [0.1 30];
-band = [30 50];
+band = [1 30];
 
 % ---- Channels to average ----
 % chanSel   = {'PO7','PO3','POz','O1','Oz','O2','PO4','PO8'}; chanLabel = 'Occipital';
 % chanSel   = {'O2','PO4','PO8'}; chanLabel = 'Occipital Right';
 % chanSel   = {'PO7','PO3','O1'}; chanLabel = 'Occipital Left';
 chanSel   = {'PO7','PO3','O1','O2','PO4','PO8'}; chanLabel = 'Laterized Occipital';
-chanSel   = {'Cz'}; chanLabel = 'Cz';
-chanSel   = {'CP1'}; chanLabel = 'CP1';
+% chanSel   = {'POz','Oz'}; chanLabel = 'Occipital Central';
 
 trig = "cue" ;
 conditionNames = unique(conditionNames);
@@ -38,7 +36,7 @@ if ~exist(outDir, 'dir')
 end
 
 % ---- Where to save the figures (as .fig) ----
-figDir = 'D:\figs';
+figDir = 'C:\Users\p06470\Desktop\figs';
 if ~exist(figDir, 'dir')
     mkdir(figDir);
 end
@@ -146,10 +144,10 @@ for i = 1:numel(conds)
     lgd.Box = 'off';
 end
 
-sgtitle(sprintf('Percept by ISI (%s, %d-%d Hz)', ...
-    chanLabel, round(band(1)), band(2)), 'FontSize',16, 'FontWeight','bold');
+sgtitle(sprintf('Cue-locked ERP, whole epoch (%s, %d-%d Hz)', ...
+    chanLabel, band(1), band(2)), 'FontSize',16, 'FontWeight','bold');
 
-savefig(gcf, fullfile(figDir, sprintf('Fig1_ISIPercept_%s_%s.fig', chanTag, bandTag)));
+savefig(gcf, fullfile(figDir, sprintf('Fig1_AvgAcrossValidity_%s_%s.fig', chanTag, bandTag)));
 
 %% ================= FIGURE 2: per-validity (color=validity, style=one/two) ==
 
@@ -208,10 +206,10 @@ lgd = legend(allHandles, allLabels, 'Orientation','horizontal', 'NumColumns', 3)
 lgd.Position = [0.15 0.005 0.7 0.03];
 lgd.Box = 'off';
 
-sgtitle(sprintf('ISI Validity and Percept (%s, %d-%d Hz)', ...
-    chanLabel, round(band(1)), band(2)), 'FontSize',16, 'FontWeight','bold');
+sgtitle(sprintf('ERP, whole epoch (%s, %d-%d Hz)', ...
+    chanLabel, band(1), band(2)), 'FontSize',16, 'FontWeight','bold');
 
-savefig(gcf, fullfile(figDir, sprintf('Fig2_ISIValidPercept_%s_%s.fig', chanTag, bandTag)));
+savefig(gcf, fullfile(figDir, sprintf('Fig2_PerValidity_%s_%s.fig', chanTag, bandTag)));
 
 %% ================= FIGURE 3: aggregated across all ISIs =================
 
@@ -256,10 +254,10 @@ if ~isempty(tEnd), xlim([tDisplayStart tEnd]); end
 xlabel('Time (s)');
 ylabel('Amplitude (\muV)');
 legend(h, labels, 'Location','eastoutside');
-title(sprintf('Grand Average Vailidity and Percept (%s)', chanLabel));
+title(sprintf('Aggregated Across ISIs, whole epoch (%s)', chanLabel));
 grid on; box off
 
-savefig(gcf, fullfile(figDir, sprintf('Fig3_GAValiPerc_%s_%s.fig', chanTag, bandTag)));
+savefig(gcf, fullfile(figDir, sprintf('Fig3_AggregatedAcrossISI_%s_%s.fig', chanTag, bandTag)));
 
 %% ================= FIGURE 4: averaged across validity AND aggregated across ISI =================
 
@@ -278,10 +276,10 @@ grid on; box off
 
 legend([h1 h2], {'Perceived 2 flashes','Perceived 1 flash'}, 'Location','best');
 
-title(sprintf('Grand Average Percept (%s, %d-%d Hz)', ...
-    chanLabel, round(band(1)), band(2)));
+title(sprintf('ERP, whole epoch (%s, %d-%d Hz)', ...
+    chanLabel, band(1), band(2)));
 
-savefig(gcf, fullfile(figDir, sprintf('Fig4_GAPercept_%s_%s.fig', chanTag, bandTag)));
+savefig(gcf, fullfile(figDir, sprintf('Fig4_AvgAcrossValidityAndISI_%s_%s.fig', chanTag, bandTag)));
 
 %% ================= FIGURE 5: grand average by validity only =================
 % Pools across BOTH percept (one/two) AND all ISI conditions, leaving only
@@ -327,11 +325,11 @@ if ~isempty(tEnd), xlim([tDisplayStart tEnd]); end
 xlabel('Time (s)');
 ylabel('Amplitude (\muV)');
 legend(h, labels, 'Location','best');
-title(sprintf('Grand Average by Validity (%s, %d-%d Hz)', ...
-    chanLabel, round(band(1)), band(2)));
+title(sprintf('Grand Average by Validity, whole epoch (%s, %d-%d Hz)', ...
+    chanLabel, band(1), band(2)));
 grid on; box off
 
-savefig(gcf, fullfile(figDir, sprintf('Fig5_GAValidity_%s_%s.fig', chanTag, bandTag)));
+savefig(gcf, fullfile(figDir, sprintf('Fig5_GrandAverageByValidity_%s_%s.fig', chanTag, bandTag)));
 
 %% ================= LOCAL HELPER FUNCTIONS =================
 

@@ -82,7 +82,7 @@ subjects = T_check.sub;
 % Loop through all subjects
 for iSubj=1:length(subjects)
      
-
+    tic
     % Prepare EEG file name 
     fname_run= dir(fullfile(INDIR,subjects{iSubj},strcat(subjects{iSubj},'*.bdf')));
       
@@ -277,7 +277,7 @@ for iSubj=1:length(subjects)
         
             % ---- choose grouping variable ----
             if eventNames{e} == "cue"
-                groupingVar = string(T{:,4});
+                groupingVar = string(T{:,9}) + "_" + string(T{:,6})+ "_" + string(T{:,4});
             elseif eventNames{e} == "stim1"
                 groupingVar = string(T{:,9}) + "_" + string(T{:,6})+ "_" + string(T{:,4});
             elseif eventNames{e} == "stim2"
@@ -382,7 +382,7 @@ for iSubj=1:length(subjects)
 % Process: Import MEG/EEG: Events
 labels = {sRaw.F.events.label}; labels = string(labels);
 
-mask = contains(labels, '_');
+mask = contains(labels, 'cue_');
 EventsMarkers = labels(mask);
 
 
@@ -392,11 +392,11 @@ EventsMarkers = labels(mask);
     for iCond=1:length(EventsMarkers)
 
         if contains(EventsMarkers{iCond}, 'cue')
-            Epoch = [-0.5,1.5];
+            Epoch = [-0.3,1.5];
             Epoch_baseline = [-0.5,0];
         else
-            Epoch = [-0.5,0.5];
-            Epoch_baseline = [-0.5,0];
+            Epoch = [-0.3,0.5];
+            Epoch_baseline = [-0.2,0];
         end
 
         %% -------------- ERP ----------------
@@ -446,7 +446,8 @@ EventsMarkers = labels(mask);
                 'overwrite', 0);
 
              %% -------------- TF ----------------
-             if contains(EventsMarkers{iCond}, 'stim1')
+             if contains(EventsMarkers{iCond}, 'cue')
+
             % Process: Time-frequency (Morlet wavelets)
             sFilesTF = bst_process('CallProcess', 'process_timefreq', sFilesEpochs, [], ...
                 'sensortypes',   'EEG', ...
@@ -458,28 +459,15 @@ EventsMarkers = labels(mask);
                      'MorletFwhmTc',    3, ...
                      'ClusterFuncTime', 'none', ...
                      'Measure',         'power', ...
-                     'Output',          'all ', ...
+                     'Output',          'average', ...
                      'RemoveEvoked',    0, ...
                      'SaveKernel',      0), ...
-                'normalize2020', 1, ...
-                'normalize',     'multiply2020');
-
-            % Process: Z-score transformation: [-500ms,-2ms]
-            sFilesTF_z = bst_process('CallProcess', 'process_baseline_norm', sFilesTF, [], ...
-                'baseline',  Epoch_baseline, ...
-                'method',    'zscore', ...  % Z-score transformation:    x_std = (x - &mu;) / &sigma;
-                'overwrite', 0);
-
-            % Process: Average: Everything
-            sFilesTFavg = bst_process('CallProcess', 'process_average', sFilesTF_z, [], ...
-                'avgtype',       1, ...  % Everything
-                'avg_func',      1, ...  % Arithmetic average:  mean(x)
-                'weighted',      1, ...
-                'matchrows',     1, ...
-                'iszerobad',     1);
+                'normalize2020', 0, ...
+                'normalize',     'none');  % None: Save non-standardized time-frequency maps
 
              end
 
     end
+    toc
 end
 end
